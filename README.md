@@ -14,4 +14,15 @@ I follow [HOSTING_SETUP.md](HOSTING_SETUP.md) to connect this GitHub repository 
 
 I never put MongoDB connection strings, API keys, or login passwords into source code or public files. I replace any previously disclosed credentials before publishing.
 
-**Status:** Repository initialization in progress; deployment is not yet verified.
+**Status:** All application source files are present, and GitHub's source assembly and automated tests passed. My production Vercel deployment remains pending account-side project creation, securely configured environment variables, and live verification.
+
+## Run anywhere
+
+I use [HOSTING_SETUP.md](HOSTING_SETUP.md) for my web hosting instructions. I go to https://vercel.com/new/import, choose `ascetejensan/signal_desk`, configure the listed production variables securely, and deploy. Vercel will provide a public HTTPS link once deployment succeeds.
+
+I do not expect my professor to install Git, Python, Ollama, MongoDB or Docker. My professor can visit that HTTPS address from a browser. I retain an application login for access to protected features and share the website login privately, not the server API keys.
+
+I have **not yet verified a live production URL**. I treat the deployment as pending until I test the public HTTPS URL from another device.
+
+[GitHub automated test results](https://github.com/ascetejensan/signal_desk/actions/workflows/verify-cti.yml)
+

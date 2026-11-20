@@ -1,67 +1,82 @@
 # syntax=docker/dockerfile:1.7
-# Single image: CTI Sentinel + local MongoDB + preloaded Ollama models.
-# Built on GitHub Actions, not on an 8 GB Windows laptop.
-ARG OLLAMA_IMAGE=ollama/ollama:latest
-FROM --platform=linux/amd64 ${OLLAMA_IMAGE} AS ollama
+# One Linux/amd64 image: public CTI Sentinel source + local MongoDB + offline
+# Ollama chat/embedding models. No Atlas data, passwords, or paid API keys.
+#
+# Default: lightweight 1B model; --build-arg CHAT_MODEL=llama3.2:3b for full.
+ARG OLLAMA_BASE=ollama/ollama:latest
+FROM --platform=linux/amd64 ${OLLAMA_BASE} AS ollama-cpu
+# Trim GPU-only runners from the FINAL image (the source stage is larger).
+RUN set -eux; \
+    test -x /usr/bin/ollama; \
+    test -d /usr/lib/ollama; \
+    rm -rf /usr/lib/ollama/cuda* /usr/lib/ollama/rocm* \
+           /usr/lib/ollama/vulkan* /usr/lib/ollama/jetpack*; \
+    find /usr/lib/ollama -maxdepth 1 -type f \
+      \( -name '*cuda*' -o -name '*rocm*' -o -name '*vulkan*' \) -delete
+
 FROM --platform=linux/amd64 mongo:8.0-noble
-
 ARG CHAT_MODEL=llama3.2:1b
-LABEL org.opencontainers.image.source="https://github.com/ascetejensan/signal_desk"
-LABEL org.opencontainers.image.title="CTI Sentinel Classroom"
-LABEL org.opencontainers.image.description="Local Flask, MongoDB, preloaded Ollama models; contains no cloud secrets"
-ENV DEBIAN_FRONTEND=noninteractive \
-    PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
-    OLLAMA_MODELS=/opt/cti-models \
-    OLLAMA_HOST=127.0.0.1:11434 \
-    OLLAMA_BASE_URL=http://127.0.0.1:11434 \
-    OLLAMA_MODEL=${CHAT_MODEL} EMBEDDING_MODEL=nomic-embed-text \
-    OLLAMA_CONTEXT_LENGTH=2048 \
-    OLLAMA_NUM_PARALLEL=1 OLLAMA_MAX_LOADED_MODELS=1 OLLAMA_KEEP_ALIVE=0 \
-    EMBEDDING_DIMENSIONS=768 CHAT_RETRIEVAL=exact \
-    LLM_BACKEND=ollama \
-    MONGODB_URI=mongodb://127.0.0.1:27017 MONGODB_DB=cti_sentinel_classroom \
-    APP_USERNAME=ishan SIGNAL_DESK_LOCAL_QUEUE=1 AUTO_MONITOR=0 \
-    PATH=/opt/cti-venv/bin:${PATH}
+LABEL org.opencontainers.image.source="https://github.com/ascetejensan/signal_desk" \
+      org.opencontainers.image.title="CTI Sentinel Classroom — Offline All-in-One" \
+      org.opencontainers.image.description="Flask, MongoDB, offline Ollama models; no embedded API keys"
 
-# MongoDB base provides mongod. Only Python, CPU Ollama runtime, and basic
-# probes are added; no node toolchain, GPU libraries or development packages.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      python3 python3-venv ca-certificates curl libgomp1 libstdc++6 \
-    && rm -rf /var/lib/apt/lists/*
-COPY --from=ollama /usr/bin/ollama /usr/bin/ollama
-COPY --from=ollama /usr/lib/ollama /usr/lib/ollama
-RUN python3 -m venv /opt/cti-venv \
-    && mkdir -p /opt/cti-models /app \
-    && ollama --version
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 \
+    OLLAMA_HOST=127.0.0.1:11434 \
+    OLLAMA_MODELS=/opt/cti-classroom-models \
+    OLLAMA_NUM_PARALLEL=1 OLLAMA_MAX_LOADED_MODELS=1 \
+    OLLAMA_KEEP_ALIVE=15s OLLAMA_CONTEXT_LENGTH=2048 \
+    LLM_BACKEND=ollama OLLAMA_BASE_URL=http://127.0.0.1:11434 \
+    OLLAMA_MODEL=${CHAT_MODEL} \
+    EMBEDDING_MODEL=nomic-embed-text EMBEDDING_DIMENSIONS=768 \
+    CHAT_RETRIEVAL=exact \
+    MONGODB_URI=mongodb://127.0.0.1:27017 MONGODB_DB=cti_classroom \
+    APP_USERNAME=ishan SIGNAL_DESK_LOCAL_QUEUE=1 AUTO_MONITOR=0 \
+    PATH=/opt/cti-venv/bin:$PATH
+
+# Use the distro Python and a minimal virtualenv; no compilers or GUI packages.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      python3 python3-venv python3-pip ca-certificates curl tini libgomp1 libopenblas0 \
+ && rm -rf /var/lib/apt/lists/* \
+ && python3 -m venv /opt/cti-venv
+
+COPY --from=ollama-cpu /usr/bin/ollama /usr/bin/ollama
+COPY --from=ollama-cpu /usr/lib/ollama /usr/lib/ollama
+RUN ollama --version
 
 WORKDIR /app
 COPY requirements.txt ./requirements.txt
-RUN python -m pip install --no-cache-dir -r requirements.txt
+RUN /opt/cti-venv/bin/pip install --disable-pip-version-check --no-cache-dir -r requirements.txt
 
-# Build machine downloads the models ONCE into the final image, which is then
-# uploaded to GHCR. Docker run does not pull Ollama models independently.
+# Models are baked into the image, NOT fetched by students/professor at runtime.
+# Keep this step BEFORE COPY . to preserve model layers on source-code updates.
 RUN set -eu; \
-    ollama serve >/tmp/ollama-build.log 2>&1 & server=$!; \
-    trap 'kill "$server" 2>/dev/null || true' EXIT; \
-    attempt=0; \
-    until curl -fsS http://127.0.0.1:11434/api/tags >/dev/null; do \
-      attempt=$((attempt+1)); \
-      if [ "$attempt" -ge 90 ]; then cat /tmp/ollama-build.log; exit 1; fi; \
+    mkdir -p "$OLLAMA_MODELS"; \
+    ollama serve > /tmp/cti-model-build.log 2>&1 & pid=$!; \
+    trap 'kill "$pid" 2>/dev/null || true' EXIT; \
+    ready=0; \
+    for n in $(seq 1 90); do \
+      if curl --silent --fail http://127.0.0.1:11434/api/tags >/dev/null; then ready=1; break; fi; \
+      if ! kill -0 "$pid" 2>/dev/null; then cat /tmp/cti-model-build.log; exit 1; fi; \
       sleep 1; \
     done; \
-    ollama pull "$OLLAMA_MODEL"; \
+    if [ "$ready" -ne 1 ]; then cat /tmp/cti-model-build.log; exit 1; fi; \
+    ollama pull "$CHAT_MODEL"; \
     ollama pull nomic-embed-text; \
     ollama list; \
-    kill "$server" 2>/dev/null || true; \
-    rm -f /tmp/ollama-build.log
+    rm -f /tmp/cti-model-build.log; \
+    kill "$pid" 2>/dev/null || true
 
 COPY . /app
-RUN test -f /app/data/public-threat-snapshot.json.gz \
-    && test -f /app/frontend/vt_ui.js \
-    && chmod +x /app/docker/classroom-entrypoint.sh
+RUN test -s /app/data/public-threat-snapshot.json.gz \
+ && test -s /app/frontend/vt_ui.js \
+ && test -s /app/app.py \
+ && chmod 0755 /app/docker/classroom-start.sh
 
 EXPOSE 8765
-# The MongoDB base declares /data/db and /data/configdb persistent volumes.
-HEALTHCHECK --interval=45s --timeout=15s --start-period=240s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/demo',timeout=5); urllib.request.urlopen('http://127.0.0.1:11434/api/tags',timeout=5)" || exit 1
-ENTRYPOINT ["/bin/bash", "/app/docker/classroom-entrypoint.sh"]
+# Only publish 8765 to 127.0.0.1 on the host. MongoDB/Ollama have no host ports.
+HEALTHCHECK --interval=45s --timeout=12s --start-period=240s --retries=3 \
+  CMD curl --silent --fail http://127.0.0.1:8765/api/demo/summary >/dev/null \
+      && curl --silent --fail http://127.0.0.1:11434/api/tags >/dev/null || exit 1
+ENTRYPOINT ["/usr/bin/tini", "--", "/bin/bash", "/app/docker/classroom-start.sh"]

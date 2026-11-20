@@ -91,15 +91,4 @@ Typical server environment keys include:
 The professor does **not** need to install Git, Python, Docker, MongoDB or Ollama just to open the hosted website. Access to the complete workspace requires a login shared privately by the owner; the public demo is read-only.
 
 **Verification boundary:** The Vercel production deployment and GitHub automated tests have succeeded. The VirusTotal provider tests use mocked responses; a live end-to-end upload has not been independently confirmed. AI answers are conditional on provider access and available API credits. Google Gemini has previously returned HTTP 402 (payment/credit required) on this deployment; that provider issue is outside the README and VirusTotal changes.
-
-## Repository and lab submission separation
-
-I keep the **maintained mini-project source and releases** here and the **18 NoSQL/MongoDB laboratory chapters and reports** in the separate course submission repository. The copies under its `mini-project/` folder are earlier local snapshots and need not match the latest hosted deployment.
-
-Original implementation attribution: [SOLANKYYY/signal-desk](https://github.com/SOLANKYYY/signal-desk). See [SOURCE_ATTRIBUTION.md](SOURCE_ATTRIBUTION.md) for provenance and independent-evidence limits. I do not claim original authorship of reused code or reproduce prior experiment benchmarks as my own measurements.
-
----
-
-**Maintained source:** https://github.com/ascetejensan/signal_desk  
-**Coursework index (private):** https://github.com/ascetejensan/CTI-Sentinel-AI-Threat-Intelligence  
-**Live website:** https://cti-sentinel-ishan.vercel.app/
+shan.vercel.app/

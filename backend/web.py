@@ -29,6 +29,7 @@ def session_valid(username):
 
 @app.before_request
 def authorize():
+    if request.method=='GET' and request.path in ('/demo','/api/demo/summary','/api/demo/events'):return
     if request.path in ('/intel.css','/dashboard.css') and request.method=='GET':return
     if request.path=='/api/cron':
         secret=os.getenv('CRON_SECRET','')
@@ -74,6 +75,11 @@ class Bridge(Handler):
 @app.route('/',methods=['GET'])
 @app.route('/<path:path>',methods=['GET','POST'])
 def route(path=''):
+    if request.method=='GET' and path=='demo':
+        return Response((ROOT/'frontend/demo.html').read_bytes(),mimetype='text/html',headers={'Cache-Control':'public, max-age=60','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'",'X-Content-Type-Options':'nosniff'})
+    if request.method=='GET' and path in ('api/demo/summary','api/demo/events'):
+        from .public_demo import get as public_preview
+        return respond(public_preview(path.removeprefix('api/demo/'),request.args))
     if request.method=='GET' and path=='api/assistant/device-script':
         return Response((ROOT/'tools/Collect-SignalDeskCheck.ps1').read_bytes(),mimetype='text/plain',headers={'Content-Disposition':'attachment; filename=Collect-SignalDeskCheck.ps1','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
     if request.method=='GET' and path in ('','laboratory','intel.js','intel.css','dashboard.css','coursework.js','assistant.js','app.js','styles.css','replica-lab.js','exercise9.js'):

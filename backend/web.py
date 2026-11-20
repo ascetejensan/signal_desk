@@ -35,6 +35,8 @@ def authorize():
         secret=os.getenv('CRON_SECRET','')
         if len(secret)>=32 and hmac.compare_digest(request.headers.get('Authorization',''),'Bearer '+secret):return
         return respond({'error':'Unauthorized cron request'},401)
+    if request.method=='GET' and request.path in ('/','/login') and len(os.getenv('APP_PASSWORD',''))<16:
+        return redirect('/demo',code=302)
     password=os.getenv('APP_PASSWORD','');username=os.getenv('APP_USERNAME','admin')
     if len(password)<16:return respond({'error':'Set APP_PASSWORD to at least 16 characters in Vercel, then redeploy.'},503)
     if request.method=='POST':

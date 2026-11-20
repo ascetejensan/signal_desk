@@ -1,0 +1,17 @@
+# CTI Sentinel | AI Threat Intelligence Chatbot
+
+I am **Ishan Mahansaria** (USN **24BTRCL085**, AIML B). I maintain this project as my authorized adaptation of [Signal Desk](https://github.com/SOLANKYYY/signal-desk) for NoSQL Database using MongoDB (23CSE528, faculty Sujeet Jagtap).
+
+**Goal:** I deploy CTI Sentinel as a hosted HTTPS website so my professor can open it on any computer without installing Git, Docker, MongoDB, Ollama or Python.
+
+The application uses a Flask backend, MongoDB Atlas, a VirusTotal hash-reputation lookup, and optional hosted Gemini/OpenAI AI inference. Provider access is configured with server-side environment variables, not committed credentials.
+
+## Deployment
+
+I follow [HOSTING_SETUP.md](HOSTING_SETUP.md) to connect this GitHub repository to Vercel. The original Signal Desk source is imported automatically from its verified upstream revision by a GitHub Actions workflow. I preserve source attribution in [SOURCE_ATTRIBUTION.md](SOURCE_ATTRIBUTION.md).
+
+## Security
+
+I never put MongoDB connection strings, API keys, or login passwords into source code or public files. I replace any previously disclosed credentials before publishing.
+
+**Status:** Repository initialization in progress; deployment is not yet verified.

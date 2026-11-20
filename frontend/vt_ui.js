@@ -66,7 +66,9 @@ window.renderVirusTotal = function (set, api, fail) {
         root.append(group);
         const other=['timeout','failure','type-unsupported','confirmed-timeout'].reduce((sum,k)=>sum+(data.stats[k]||0),0);
         if (other) text(root,other+' engines timed out, failed or did not support this input.');
-        if ((data.stats.malicious||0)+(data.stats.suspicious||0)>0)
+        const checked=Object.values(data.stats).reduce((sum,n)=>sum+(Number(n)||0),0);
+        if(checked===0)text(root,'No antivirus engine results are available yet. No safety verdict is possible.');
+        else if ((data.stats.malicious||0)+(data.stats.suspicious||0)>0)
           text(root,'Attention: some engines flagged this item. Review the full VirusTotal report.');
         else text(root,'No engines flagged this item in the available report; this is NOT a guarantee of safety.');
       } else text(root,'No engine detection counts were returned; no safety conclusion is possible.');
@@ -105,6 +107,7 @@ window.renderVirusTotal = function (set, api, fail) {
   }
   $('vt-file').onchange=async()=>{
     selected=null;selectedHash='';fileId='';
+    $('vt-file-consent').checked=false;
     $('vt-file-refresh').hidden=true;$('vt-file-submit').disabled=true;
     $('vt-local').textContent='Inspecting…';$('vt-hash-result').replaceChildren();$('vt-file-result').replaceChildren();
     const file=$('vt-file').files[0];
@@ -144,6 +147,7 @@ window.renderVirusTotal = function (set, api, fail) {
     });
   };
   $('vt-url-check').onclick=()=>action('vt-url-check',()=>api('/api/vt/url',{url:$('vt-url').value}),'vt-url-result');
+  $('vt-url').oninput=()=>{$('vt-url-consent').checked=false;$('vt-url-submit').disabled=true;urlId='';$('vt-url-refresh').hidden=true;};
   $('vt-url-consent').onchange=()=>{$('vt-url-submit').disabled=!$('vt-url-consent').checked;};
   $('vt-url-submit').onclick=()=>{
     if(!$('vt-url-consent').checked)return;

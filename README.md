@@ -16,6 +16,12 @@ I never put MongoDB connection strings, API keys, or login passwords into source
 
 **Status:** All application source files are present, and GitHub's source assembly and automated tests passed. My production Vercel deployment remains pending account-side project creation, securely configured environment variables, and live verification.
 
+## Read-only access without an account
+
+I offer a public `/demo` page alongside the full authenticated workspace. My professor can open `https://MY-VERIFIED-VERCEL-DOMAIN/demo` from any browser after I deploy the site. I will replace this placeholder with my actual tested URL. The preview includes a genuine bundled public-source snapshot and a browser-local file hash demonstration. It cannot change database records, submit API requests to VirusTotal, or open private chat history.
+
+**I never put application passwords or server API keys in the public demo.**
+
 ## Run anywhere
 
 I use [HOSTING_SETUP.md](HOSTING_SETUP.md) for my web hosting instructions. I go to https://vercel.com/new/import, choose `ascetejensan/signal_desk`, configure the listed production variables securely, and deploy. Vercel will provide a public HTTPS link once deployment succeeds.

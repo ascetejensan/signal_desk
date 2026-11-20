@@ -48,6 +48,12 @@ I create or rotate a dedicated Atlas database user with only the required permis
 
 Because Vercel outbound IP addresses are dynamic, I configure Atlas networking using the official MongoDB Atlas–Vercel integration where appropriate, or deliberately add a temporary `0.0.0.0/0` Atlas access-list entry with strong scoped credentials and TLS. That entry allows connection *attempts* from any IPv4 address, so I review the exposure and remove the broad access when I have a safer networking arrangement. I never add my old leaked database password.
 
+## Public access without passwords
+
+I include a separate `/demo` route that my professor can open in any browser without creating an account or entering a password. Once Vercel issues my HTTPS domain, the public demo address will be `https://MY-VERIFIED-DEPLOYMENT.vercel.app/demo`. I will replace this placeholder only after verifying my actual deployment URL.
+
+The demo is deliberately **read-only**: it uses the bundled public intelligence snapshot and computes file SHA-256 locally in the browser. It does not expose MongoDB records beyond the public snapshot, private investigation notes, chat history, VirusTotal requests or credentials. The complete research workspace still requires the configured username and private website password. I do not claim that the demo is a live threat feed.
+
 ## Step 4 — Verify the live deployment
 
 Once deployment completes, Vercel gives me a production HTTPS URL. **This URL does not exist until deployment succeeds.** I test it from my phone on mobile data and from an incognito browser, not only from my laptop.

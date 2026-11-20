@@ -1,34 +1,105 @@
-# CTI Sentinel | AI Threat Intelligence Chatbot
+# CTI Sentinel — AI Threat Intelligence & MongoDB Research Workspace
 
-I am **Ishan Mahansaria** (USN **24BTRCL085**, AIML B). I maintain this project as my authorized adaptation of [Signal Desk](https://github.com/SOLANKYYY/signal-desk) for NoSQL Database using MongoDB (23CSE528, faculty Sujeet Jagtap).
+**Student:** Ishan Mahansaria  
+**USN:** 24BTRCL085  
+**Class:** AIML B  
+**Faculty:** Sujeet Jagtap  
+**Course:** 23CSE528 — NoSQL Database using MongoDB
 
-**Goal:** I deploy CTI Sentinel as a hosted HTTPS website so my professor can open it on any computer without installing Git, Docker, MongoDB, Ollama or Python.
+CTI Sentinel is my hosted academic threat-intelligence and MongoDB application, adapted from the [original Signal Desk project](https://github.com/SOLANKYYY/signal-desk) with appropriate source attribution.
 
-The application uses a Flask backend, MongoDB Atlas, a VirusTotal hash-reputation lookup, and optional hosted Gemini/OpenAI AI inference. Provider access is configured with server-side environment variables, not committed credentials.
+## Open the application
 
-## Deployment
+| Destination | Link | Notes |
+|---|---|---|
+| **Live CTI Sentinel** | **[Open Full Website](https://cti-sentinel-ishan.vercel.app/)** | Hosted Flask interface; full workspace requires an application login |
+| **Public demo** | **[Open No-Login Demo](https://cti-sentinel-ishan.vercel.app/demo)** | Read-only historical public-intelligence snapshot, plus local hash demonstration |
+| **VirusTotal scanner** | [File and URL reputation](https://cti-sentinel-ishan.vercel.app/#scan) | Authenticated full workspace; API access is subject to VirusTotal quotas |
+| **Coursework repository** | [NoSQL laboratory submission](https://github.com/ascetejensan/CTI-Sentinel-AI-Threat-Intelligence) | **Private**; the owner must grant GitHub access to reviewers |
+| **Lab submission source pointer** | [Mini-project SOURCE.md](https://github.com/ascetejensan/CTI-Sentinel-AI-Threat-Intelligence/blob/main/mini-project/SOURCE.md) | Explains why this is the maintained app repository; private link |
 
-I follow [HOSTING_SETUP.md](HOSTING_SETUP.md) to connect this GitHub repository to Vercel. The original Signal Desk source is imported automatically from its verified upstream revision by a GitHub Actions workflow. I preserve source attribution in [SOURCE_ATTRIBUTION.md](SOURCE_ATTRIBUTION.md).
+**This repository contains the maintained mini-project source.** My separate [`CTI-Sentinel-AI-Threat-Intelligence`](https://github.com/ascetejensan/CTI-Sentinel-AI-Threat-Intelligence) repository organizes the 18 coursework experiments, Docker Hub references, report drafts and an earlier local-source snapshot.
 
-## Security
+## Main features
 
-I never put MongoDB connection strings, API keys, or login passwords into source code or public files. I replace any previously disclosed credentials before publishing.
+| Workspace area | Function |
+|---|---|
+| Workspace Home | Research overview and database-backed counts |
+| AI Threat Assistant | Optional provider-backed answers and context, with MongoDB storage; requires working provider quota/billing |
+| Threat Explorer | Explore published indicator observations and reported events |
+| Shared Indicators | Review common observables in the collected public feeds |
+| File & Message Checks | Browser-side file SHA-256, VirusTotal reputation, explicit file and website submissions, clear detection counts |
+| Investigation Notebook | Save and review case notes in MongoDB |
+| Database Experiments | Academic MongoDB laboratory evidence and experiment interface |
+| Compare Databases | Review database models, workloads and trade-offs |
+| Evidence Library | Search indexed report evidence where available |
+| Sources & Coverage | Track published feed sources and coverage metadata |
+| Export Intelligence | Export documented public-feed observations |
 
-**Status:** All application source files are present, and GitHub's source assembly and automated tests passed. My production Vercel deployment remains pending account-side project creation, securely configured environment variables, and live verification.
+**Reputation is not a safety verdict:** VirusTotal engine counts are third-party assessments, and a missing hash does not prove that a file is clean. The UI requires explicit consent before sending file contents or public URLs to the provider. On Vercel, optional file submission is limited to **2 MB**; local SHA-256 calculation supports files up to 20 MB.
 
-## Read-only access without an account
+## VirusTotal implementation and usage
 
-I offer a public `/demo` page alongside the full authenticated workspace. My professor can open `https://MY-VERIFIED-VERCEL-DOMAIN/demo` from any browser after I deploy the site. I will replace this placeholder with my actual tested URL. The preview includes a genuine bundled public-source snapshot and a browser-local file hash demonstration. It cannot change database records, submit API requests to VirusTotal, or open private chat history.
+The current scanner supports four distinct workflows:
 
-**I never put application passwords or server API keys in the public demo.**
+1. **Local file check:** Select a file and compute SHA-256 in your browser. This does not execute, upload or scan the file.
+2. **Hash reputation:** Look up MD5, SHA-1 or SHA-256 against the existing VirusTotal database; display reported malicious, suspicious, harmless and undetected classifications and the provider report link if present.
+3. **Consented file scan:** Submit a non-confidential file to VirusTotal's v3 API, then refresh the analysis ID to view counts after processing.
+4. **Website reputation and URL analysis:** Check existing reports for public URLs, or explicitly consent to request a new URL analysis.
 
-## Run anywhere
+Uploaded files may be shared with security partners. Never upload confidential coursework, personal files, student records, credentials or unpublished research. Follow [**the full VirusTotal scanning guide**](docs/VIRUSTOTAL_SCANNING.md) for restrictions, API errors and test coverage.
 
-I use [HOSTING_SETUP.md](HOSTING_SETUP.md) for my web hosting instructions. I go to https://vercel.com/new/import, choose `ascetejensan/signal_desk`, configure the listed production variables securely, and deploy. Vercel will provide a public HTTPS link once deployment succeeds.
+## Project architecture
 
-I do not expect my professor to install Git, Python, Ollama, MongoDB or Docker. My professor can visit that HTTPS address from a browser. I retain an application login for access to protected features and share the website login privately, not the server API keys.
+| Layer | Technology / role |
+|---|---|
+| Frontend | Vanilla HTML, CSS and JavaScript, including `frontend/intel.js` and `frontend/vt_ui.js` |
+| Backend | Python 3.12 and Flask; `backend/web.py` serves Vercel |
+| Data persistence | MongoDB Atlas using `MONGODB_URI` |
+| VirusTotal | v3 API called **server-side** using `VIRUSTOTAL_API_KEY` |
+| Optional AI | Gemini, OpenAI or local Ollama; hosted access depends on configured provider, model and quota |
+| Hosting | Vercel; the public demo is distinct from the password-protected workspace |
+| Automated checks | GitHub Actions: Python tests, JavaScript syntax checks and project structure |
 
-I have **not yet verified a live production URL**. I treat the deployment as pending until I test the public HTTPS URL from another device.
+### Navigation for reviewers
 
-[GitHub automated test results](https://github.com/ascetejensan/signal_desk/actions/workflows/verify-cti.yml)
+- [Hosting and server environment](HOSTING_SETUP.md)
+- [VirusTotal usage and privacy](docs/VIRUSTOTAL_SCANNING.md)
+- [Source attribution](SOURCE_ATTRIBUTION.md)
+- [Docker Hub experiment references](MY_DOCKER_HUB_LINKS.md)
+- [Automated tests](https://github.com/ascetejensan/signal_desk/actions/workflows/verify-cti.yml)
+- [Application implementation](backend/)
+- [Frontend source](frontend/)
+- [Tests](tests/)
+- [Coursework submission index](https://github.com/ascetejensan/CTI-Sentinel-AI-Threat-Intelligence/blob/main/README.md) (**private repository**)
 
+## Cloud deployment
+
+The website is hosted at **https://cti-sentinel-ishan.vercel.app/**, with a verified publicly accessible demo at [`/demo`](https://cti-sentinel-ishan.vercel.app/demo). To deploy a personal copy, read [HOSTING_SETUP.md](HOSTING_SETUP.md), configure the Vercel project and set required server-side secrets privately.
+
+Typical server environment keys include:
+
+| Key | Purpose |
+|---|---|
+| `APP_USERNAME`, `APP_PASSWORD` | Application login; never commit actual passwords |
+| `MONGODB_URI`, `MONGODB_DB` | MongoDB Atlas connection and database name |
+| `VIRUSTOTAL_API_KEY` | Server-side file and URL reputation/analysis |
+| `LLM_BACKEND`, `GEMINI_API_KEY`, `GEMINI_MODEL` | Optional Gemini chat configuration |
+| `EMBEDDING_MODEL`, `EMBEDDING_DIMENSIONS`, `CHAT_RETRIEVAL` | Optional evidence retrieval settings |
+| `CRON_SECRET` | Private scheduled-job authorization |
+
+The professor does **not** need to install Git, Python, Docker, MongoDB or Ollama just to open the hosted website. Access to the complete workspace requires a login shared privately by the owner; the public demo is read-only.
+
+**Verification boundary:** The Vercel production deployment and GitHub automated tests have succeeded. The VirusTotal provider tests use mocked responses; a live end-to-end upload has not been independently confirmed. AI answers are conditional on provider access and available API credits. Google Gemini has previously returned HTTP 402 (payment/credit required) on this deployment; that provider issue is outside the README and VirusTotal changes.
+
+## Repository and lab submission separation
+
+I keep the **maintained mini-project source and releases** here and the **18 NoSQL/MongoDB laboratory chapters and reports** in the separate course submission repository. The copies under its `mini-project/` folder are earlier local snapshots and need not match the latest hosted deployment.
+
+Original implementation attribution: [SOLANKYYY/signal-desk](https://github.com/SOLANKYYY/signal-desk). See [SOURCE_ATTRIBUTION.md](SOURCE_ATTRIBUTION.md) for provenance and independent-evidence limits. I do not claim original authorship of reused code or reproduce prior experiment benchmarks as my own measurements.
+
+---
+
+**Maintained source:** https://github.com/ascetejensan/signal_desk  
+**Coursework index (private):** https://github.com/ascetejensan/CTI-Sentinel-AI-Threat-Intelligence  
+**Live website:** https://cti-sentinel-ishan.vercel.app/

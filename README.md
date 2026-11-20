@@ -73,6 +73,18 @@ Uploaded files may be shared with security partners. Never upload confidential c
 - [Tests](tests/)
 - [Coursework submission index](https://github.com/ascetejensan/CTI-Sentinel-AI-Threat-Intelligence/blob/main/README.md) (**private repository**)
 
+## One-image Docker classroom edition (8 GB-friendly)
+
+For a teacher who wants to **pull one Docker image** rather than visit the hosted Vercel website, see the [**optimized classroom Docker guide**](docs/DOCKER_CLASSROOM_LITE.md).
+
+- The image is built **on GitHub Actions**, avoiding a multi-GB local build on an 8 GB Windows laptop: [remote classroom build workflow](https://github.com/ascetejensan/signal_desk/actions/workflows/classroom-image.yml).
+- The **lite** image bundles the entire application, local MongoDB, public research snapshot, `llama3.2:1b` and `nomic-embed-text`; no separate model installation on the recipient laptop.
+- Image tag **after a successful build and publication**: `ghcr.io/ascetejensan/cti-sentinel-classroom:lite`. The GitHub Container Registry package must be set to **public** before anonymous pulls work.
+- The model is smaller than the original `llama3.2:3b`, so chatbot response quality may differ. A `full` variant can be manually built in the same remote workflow for larger-memory computers.
+- No real API keys, MongoDB Atlas account, hosted login password, private databases or conversation histories are embedded. The local login is generated at first startup. Runtime still needs a working Docker Linux Engine and enough memory and disk.
+
+**Avoid running `docker build` from the small extracted kit folder.** The authoritative build context is this repository root, and GitHub Actions handles the expensive build.
+
 ## Cloud deployment
 
 The website is hosted at **https://cti-sentinel-ishan.vercel.app/**, with a verified publicly accessible demo at [`/demo`](https://cti-sentinel-ishan.vercel.app/demo). To deploy a personal copy, read [HOSTING_SETUP.md](HOSTING_SETUP.md), configure the Vercel project and set required server-side secrets privately.

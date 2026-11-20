@@ -43,7 +43,7 @@ def remote(path,payload,c,stream=False):
             if isinstance(detail,dict):code=str(detail.get('code') or '');error_type=str(detail.get('type') or '')
         except Exception:pass
         # Never log provider bodies: these can contain credential fragments or user input.
-        category='quota' if (error_type=='insufficient_quota' or code in ('insufficient_quota','billing_hard_limit_reached','credit_balance_exhausted','organization_usage_limit_exceeded')) else 'http'
+        category='payment' if (exc.code==402 or code=='payment_required') else 'quota' if (error_type=='insufficient_quota' or code in ('insufficient_quota','billing_hard_limit_reached','credit_balance_exhausted','organization_usage_limit_exceeded')) else 'http'
         logging.getLogger(__name__).warning('Model request rejected: provider=%s status=%s category=%s',c['provider'],exc.code,category)
         if c['provider']=='openai':
             if category=='quota':message='OpenAI reports insufficient API quota or credits. Check Billing and usage limits for the OpenAI project that owns this key, then retry Embed selected events. Creating a key alone does not add API credits.'
@@ -54,7 +54,8 @@ def remote(path,payload,c,stream=False):
             elif exc.code==400:message='OpenAI rejected the model request. Check the configured model and supported input settings.'
             else:message='OpenAI is temporarily unavailable (HTTP '+str(exc.code)+'). Please retry shortly.'
         elif c['provider']=='gemini':
-            if exc.code==429:message='Gemini free API quota or rate limit reached. Wait for your quota to reset and retry one event. Check the free-tier limits in Google AI Studio; no paid fallback is used.'
+            if exc.code==402:message='Gemini API returned Payment Required (HTTP 402). The Google API project may have depleted Prepay credits or require billing. Check your project at https://aistudio.google.com/billing and confirm free-tier eligibility. Retrying or changing models will not replenish credits; CTI Sentinel never enables paid billing.'
+            elif exc.code==429:message='Gemini free API quota or rate limit reached. Wait for your quota to reset and retry one event. Check the free-tier limits in Google AI Studio; no paid fallback is used.'
             elif exc.code in (400,401,403):message='Gemini rejected this request. Check GEMINI_API_KEY, model access and regional availability in Google AI Studio. Keep the project on the free tier.'
             elif exc.code==404:message='The configured Gemini model is unavailable. Check GEMINI_MODEL and EMBEDDING_MODEL against Google AI Studio model availability.'
             else:message='Gemini is temporarily unavailable. Retry shortly.'

@@ -35,12 +35,15 @@ jobs:
         id: model
         shell: bash
         run: |
-          if [[ "${{ inputs.flavor }}" == "full" ]]; then
+          flavor="${{ inputs.flavor }}"
+          if [[ "$flavor" == "full" ]]; then
             echo "chat=llama3.2:3b" >> "$GITHUB_OUTPUT"
           else
+            flavor="lite"
             echo "chat=llama3.2:1b" >> "$GITHUB_OUTPUT"
           fi
-          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/cti-sentinel-classroom:${{ inputs.flavor }}" >> "$GITHUB_OUTPUT"
+          echo "flavor=$flavor" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/cti-sentinel-classroom:$flavor" >> "$GITHUB_OUTPUT"
 
       - name: Release unused disk space on ephemeral GitHub runner
         shell: bash
@@ -70,8 +73,8 @@ jobs:
           build-args: |
             CHAT_MODEL=${{ steps.model.outputs.chat }}
           provenance: false
-          cache-from: type=gha,scope=classroom-${{ inputs.flavor }}
-          cache-to: type=gha,mode=min,scope=classroom-${{ inputs.flavor }}
+          cache-from: type=gha,scope=classroom-${{ steps.model.outputs.flavor }}
+          cache-to: type=gha,mode=min,scope=classroom-${{ steps.model.outputs.flavor }}
 
       - name: Smoke-test local MongoDB, Flask and prebaked models
         shell: bash

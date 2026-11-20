@@ -1,0 +1,67 @@
+# syntax=docker/dockerfile:1.7
+# Single image: CTI Sentinel + local MongoDB + preloaded Ollama models.
+# Built on GitHub Actions, not on an 8 GB Windows laptop.
+ARG OLLAMA_IMAGE=ollama/ollama:latest
+FROM --platform=linux/amd64 ${OLLAMA_IMAGE} AS ollama
+FROM --platform=linux/amd64 mongo:8.0-noble
+
+ARG CHAT_MODEL=llama3.2:1b
+LABEL org.opencontainers.image.source="https://github.com/ascetejensan/signal_desk"
+LABEL org.opencontainers.image.title="CTI Sentinel Classroom"
+LABEL org.opencontainers.image.description="Local Flask, MongoDB, preloaded Ollama models; contains no cloud secrets"
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
+    OLLAMA_MODELS=/opt/cti-models \
+    OLLAMA_HOST=127.0.0.1:11434 \
+    OLLAMA_BASE_URL=http://127.0.0.1:11434 \
+    OLLAMA_MODEL=${CHAT_MODEL} EMBEDDING_MODEL=nomic-embed-text \
+    OLLAMA_CONTEXT_LENGTH=2048 \
+    OLLAMA_NUM_PARALLEL=1 OLLAMA_MAX_LOADED_MODELS=1 OLLAMA_KEEP_ALIVE=0 \
+    EMBEDDING_DIMENSIONS=768 CHAT_RETRIEVAL=exact \
+    LLM_BACKEND=ollama \
+    MONGODB_URI=mongodb://127.0.0.1:27017 MONGODB_DB=cti_sentinel_classroom \
+    APP_USERNAME=ishan SIGNAL_DESK_LOCAL_QUEUE=1 AUTO_MONITOR=0 \
+    PATH=/opt/cti-venv/bin:${PATH}
+
+# MongoDB base provides mongod. Only Python, CPU Ollama runtime, and basic
+# probes are added; no node toolchain, GPU libraries or development packages.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3 python3-venv ca-certificates curl libgomp1 libstdc++6 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=ollama /usr/bin/ollama /usr/bin/ollama
+COPY --from=ollama /usr/lib/ollama /usr/lib/ollama
+RUN python3 -m venv /opt/cti-venv \
+    && mkdir -p /opt/cti-models /app \
+    && ollama --version
+
+WORKDIR /app
+COPY requirements.txt ./requirements.txt
+RUN python -m pip install --no-cache-dir -r requirements.txt
+
+# Build machine downloads the models ONCE into the final image, which is then
+# uploaded to GHCR. Docker run does not pull Ollama models independently.
+RUN set -eu; \
+    ollama serve >/tmp/ollama-build.log 2>&1 & server=$!; \
+    trap 'kill "$server" 2>/dev/null || true' EXIT; \
+    attempt=0; \
+    until curl -fsS http://127.0.0.1:11434/api/tags >/dev/null; do \
+      attempt=$((attempt+1)); \
+      if [ "$attempt" -ge 90 ]; then cat /tmp/ollama-build.log; exit 1; fi; \
+      sleep 1; \
+    done; \
+    ollama pull "$OLLAMA_MODEL"; \
+    ollama pull nomic-embed-text; \
+    ollama list; \
+    kill "$server" 2>/dev/null || true; \
+    rm -f /tmp/ollama-build.log
+
+COPY . /app
+RUN test -f /app/data/public-threat-snapshot.json.gz \
+    && test -f /app/frontend/vt_ui.js \
+    && chmod +x /app/docker/classroom-entrypoint.sh
+
+EXPOSE 8765
+# The MongoDB base declares /data/db and /data/configdb persistent volumes.
+HEALTHCHECK --interval=45s --timeout=15s --start-period=240s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/demo',timeout=5); urllib.request.urlopen('http://127.0.0.1:11434/api/tags',timeout=5)" || exit 1
+ENTRYPOINT ["/bin/bash", "/app/docker/classroom-entrypoint.sh"]

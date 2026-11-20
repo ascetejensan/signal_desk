@@ -92,6 +92,10 @@ def main() -> None:
             if relative.as_posix() in PROTECTED:
                 continue
             destination = ROOT / relative
+            # This importer bootstraps missing files only; never replace the
+            # maintained hosted app, its safety fixes or tested VirusTotal UI.
+            if destination.exists():
+                continue
             destination.parent.mkdir(parents=True, exist_ok=True)
             data = source.read_bytes()
             destination.write_bytes(customize(relative, data))

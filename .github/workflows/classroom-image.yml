@@ -1,7 +1,13 @@
 name: Build CTI Sentinel classroom image in GitHub cloud
-run-name: Classroom ${{ inputs.flavor }} — preloaded MongoDB and Ollama
+run-name: Classroom ${{ inputs.flavor || 'lite' }} — preloaded MongoDB and Ollama
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'Dockerfile.classroom'
+      - 'docker/classroom-entrypoint.sh'
+      - '.github/workflows/classroom-image.yml'
   workflow_dispatch:
     inputs:
       flavor:

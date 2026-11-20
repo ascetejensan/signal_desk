@@ -1,0 +1,94 @@
+name: Build CTI Sentinel classroom image in GitHub cloud
+run-name: Classroom ${{ inputs.flavor }} — preloaded MongoDB and Ollama
+
+on:
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: "lite = llama3.2:1b (recommended for 8 GB laptops); full = llama3.2:3b"
+        required: true
+        default: lite
+        type: choice
+        options:
+          - lite
+          - full
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    steps:
+      - name: Check out entire Signal Desk source
+        uses: actions/checkout@v4
+
+      - name: Select pretrained chat model
+        id: model
+        shell: bash
+        run: |
+          if [[ "${{ inputs.flavor }}" == "full" ]]; then
+            echo "chat=llama3.2:3b" >> "$GITHUB_OUTPUT"
+          else
+            echo "chat=llama3.2:1b" >> "$GITHUB_OUTPUT"
+          fi
+          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/cti-sentinel-classroom:${{ inputs.flavor }}" >> "$GITHUB_OUTPUT"
+
+      - name: Release unused disk space on ephemeral GitHub runner
+        shell: bash
+        run: |
+          df -h /
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/share/powershell
+          df -h /
+
+      - name: Set up Docker Buildx in GitHub cloud
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (no personal token needed)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build single preloaded Docker image and push to GitHub Container Registry
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.classroom
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.model.outputs.image }}
+          build-args: |
+            CHAT_MODEL=${{ steps.model.outputs.chat }}
+          provenance: false
+          cache-from: type=gha,scope=classroom-${{ inputs.flavor }}
+          cache-to: type=gha,mode=min,scope=classroom-${{ inputs.flavor }}
+
+      - name: Smoke-test local MongoDB, Flask and prebaked models
+        shell: bash
+        env:
+          TEST_IMAGE: ${{ steps.model.outputs.image }}
+        run: |
+          docker run -d --name cti-classroom-smoke \
+            -e APP_PASSWORD=disposable-github-test-password \
+            -p 127.0.0.1:8765:8765 \
+            --memory=6g --cpus=2 "$TEST_IMAGE"
+          trap 'docker logs --tail=70 cti-classroom-smoke || true; docker rm -f cti-classroom-smoke || true' EXIT
+          echo "Waiting for MongoDB initialization and Flask..."
+          started=0
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8765/demo >/dev/null; then started=1;break;fi
+            if [[ "$(docker inspect -f '{{.State.Running}}' cti-classroom-smoke)" != "true" ]]; then
+              echo "Classroom container exited prematurely."
+              exit 1
+            fi
+            sleep 5
+          done
+          if [[ "$started" != "1" ]]; then echo "Website did not start";exit 1;fi
+          docker exec cti-classroom-smoke ollama list
+          docker exec cti-classroom-smoke python -c 'from pymongo import MongoClient; MongoClient("mongodb://127.0.0.1:27017",serverSelectionTimeoutMS=3000).admin.command("ping")'
+          docker exec cti-classroom-smoke python -c 'import json,urllib.request; r=json.load(urllib.request.urlopen("http://127.0.0.1:11434/api/tags")); names=[x["name"] for x in r["models"]]; print("Models:",names); assert "nomic-embed-text:latest" in names; assert any(x.startswith("llama3.2:") for x in names)'
+          echo "CTI Sentinel classroom image build and smoke test passed."

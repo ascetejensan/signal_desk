@@ -1,0 +1,43 @@
+name: Assemble CTI Sentinel from authorized upstream
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/assemble-cloud.yml'
+      - 'scripts/assemble_cloud.py'
+permissions:
+  contents: write
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout my repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Use Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Import the complete authorized source and customize it
+        run: python scripts/assemble_cloud.py
+      - name: Validate Python sources without connecting to cloud services
+        run: python -m compileall -q backend app.py worker.py scripts
+      - name: Verify no accidental secret files are included
+        shell: bash
+        run: |
+          if find . -type f \( -name '.env' -o -name '*.pem' -o -name '*.key' -o -name '*.p12' \) -not -path './.git/*' | grep -q .; then
+            echo 'I found a possible credential file and stopped the upload.'
+            exit 1
+          fi
+      - name: Commit my assembled source
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Import the authorized Signal Desk application and my CTI Sentinel customizations"
+            git push origin HEAD:main
+          fi

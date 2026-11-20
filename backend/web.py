@@ -8,7 +8,7 @@ from .server import Handler, encode
 from . import cloud, exercise9, coursework, chat
 
 app=Flask(__name__,static_folder=None)
-app.config['MAX_CONTENT_LENGTH']=1024*1024
+app.config['MAX_CONTENT_LENGTH']=3*1024*1024
 
 def respond(data,status=200):
     return Response(json.dumps(data,default=encode),status=status,mimetype='application/json',headers={'Cache-Control':'no-store'})
@@ -42,7 +42,7 @@ def authorize():
     if request.method=='POST':
         origin=request.headers.get('Origin')
         if (origin and urlparse(origin).netloc!=request.host) or request.headers.get('Sec-Fetch-Site')=='cross-site':return respond({'error':'Cross-origin write blocked'},403)
-        limit=1024*1024 if request.path in ('/api/replica-lab/import','/api/exercise9/import','/api/coursework/import','/api/assistant/ingest') else 98304 if request.path=='/api/assistant/chat' else 10000
+        limit=3*1024*1024 if request.path=='/api/vt/file' else 1024*1024 if request.path in ('/api/replica-lab/import','/api/exercise9/import','/api/coursework/import','/api/assistant/ingest') else 98304 if request.path=='/api/assistant/chat' else 10000
         if request.content_length is not None and request.content_length>limit:return respond({'error':'Request too large'},413)
     if request.path=='/login':return
     auth=request.authorization
@@ -84,13 +84,21 @@ def route(path=''):
         return respond(public_preview(path.removeprefix('api/demo/'),request.args))
     if request.method=='GET' and path=='api/assistant/device-script':
         return Response((ROOT/'tools/Collect-SignalDeskCheck.ps1').read_bytes(),mimetype='text/plain',headers={'Content-Disposition':'attachment; filename=Collect-SignalDeskCheck.ps1','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
-    if request.method=='GET' and path in ('','laboratory','intel.js','intel.css','dashboard.css','coursework.js','assistant.js','app.js','styles.css','replica-lab.js','exercise9.js'):
+    if request.method=='GET' and path in ('','laboratory','intel.js','vt_ui.js','intel.css','dashboard.css','coursework.js','assistant.js','app.js','styles.css','replica-lab.js','exercise9.js'):
         name=('intel.html' if not path else 'index.html' if path=='laboratory' else path);mime='text/html' if path in ('','laboratory') else 'application/javascript' if path.endswith('.js') else 'text/css'
         return Response((ROOT/'frontend'/name).read_bytes(),mimetype=mime,headers={'Cache-Control':'no-store','Content-Security-Policy':"default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'",'X-Content-Type-Options':'nosniff'})
     if request.method=='GET' and path=='api/exercise9/kit':
         return Response(exercise9.kit_bytes(),mimetype='application/zip',headers={'Content-Disposition':'attachment; filename=SignalDesk_Exercise9.zip','Cache-Control':'no-store'})
     if request.method=='GET' and path=='api/coursework':return respond(coursework.catalog(db))
     if not path.startswith('api/'):return respond({'error':'Not found'},404)
+    if path.startswith('api/vt/'):
+        from . import virustotal
+        if request.method!='POST':return respond({'error':'POST required'},405)
+        try:
+            body=request.get_json(silent=True)
+            return respond(virustotal.handle(path.removeprefix('api/vt/'),body))
+        except virustotal.VTError as exc:
+            return respond({'error':str(exc)},exc.status)
     if not os.getenv('MONGODB_URI','').startswith(('mongodb://','mongodb+srv://')):return respond({'error':'Set the hosted MONGODB_URI environment variable and redeploy.'},503)
     try:
         if path.startswith('api/assistant/'):

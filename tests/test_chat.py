@@ -120,6 +120,20 @@ class GeminiTests(unittest.TestCase):
    with self.assertRaises(chat.ChatError) as raised:chat.remote('/embeddings',{}, {'provider':'gemini'})
    self.assertIn('no paid fallback',str(raised.exception));self.assertNotIn('private-key',str(raised.exception))
 
+class GeminiPaymentTests(unittest.TestCase):
+ def test_http_402_reports_billing_clearly_without_leaking_provider_body(self):
+  import io,urllib.error
+  response=io.BytesIO(b'{"error":{"code":"payment_required","message":"secret-provider-text"}}')
+  error=urllib.error.HTTPError('https://example.invalid',402,'Payment Required',{},response)
+  with patch.dict(os.environ,{'GEMINI_API_KEY':'unit-test-key'}),patch.object(chat.urllib.request,'urlopen',side_effect=error):
+   with self.assertRaises(chat.ChatError) as raised:
+    chat.remote('/models/gemini-3.5-flash-lite:generateContent',{}, {'provider':'gemini'})
+   message=str(raised.exception)
+   self.assertIn('Payment Required',message)
+   self.assertIn('billing',message.lower())
+   self.assertNotIn('temporarily unavailable',message.lower())
+   self.assertNotIn('secret-provider-text',message)
+
 class GeminiMissingIndexTests(unittest.TestCase):
  def test_omitted_zero_index(self):
   c={'provider':'gemini','embedding':'gemini-embedding-001','dimensions':2}

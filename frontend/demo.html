@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CTI Sentinel — Public Research Demo</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;color:#172e54;background:#f3f7fd}
+*{box-sizing:border-box}body{margin:0}header{background:#fff;border-bottom:1px solid #dae3f0;padding:18px max(4vw,24px);display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.logo{font-weight:800;color:#175cce;font-size:20px;text-decoration:none}.sub{font-size:12px;color:#597090;letter-spacing:.09em;text-transform:uppercase}
+main{max-width:1180px;margin:0 auto;padding:35px 24px 70px}.hero{background:linear-gradient(125deg,#103567,#285ec0);color:white;padding:36px;border-radius:18px}
+h1{font-size:clamp(27px,4vw,43px);line-height:1.15;margin:8px 0 12px}h2{margin:0 0 12px;font-size:21px}p{line-height:1.6}.muted{color:#566d8a}.hero p{max-width:800px;color:#e2eaff}
+.ctas{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.btn{display:inline-block;padding:11px 16px;border-radius:10px;border:1px solid #ccdaee;background:white;color:#174a98;text-decoration:none;font-weight:700;cursor:pointer}
+.btn.primary{background:#2563eb;border-color:#2563eb;color:white}.hero .btn.primary{background:white;color:#174a98;border-color:white}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin:20px 0}.card{background:white;border:1px solid #dce5f1;border-radius:14px;padding:22px;box-shadow:0 3px 16px #23467c07}
+.stat{font-size:30px;font-weight:800;color:#2159aa}.tag{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:#496993}
+input[type=search],input[type=file]{width:100%;min-height:44px;border:1px solid #b8cbe3;border-radius:9px;padding:10px;background:white;color:#172e54}
+.list{display:grid;gap:11px}.event{padding:13px 0;border-bottom:1px solid #e3eaf4}.event:last-child{border-bottom:0}.event b{display:block}.event small{display:block;margin-top:4px;color:#5b718e}
+.toolbar{display:flex;gap:12px;margin:15px 0;flex-wrap:wrap}.toolbar input{flex:1;min-width:180px}
+.notice{border-left:4px solid #397ce0;padding:12px 17px;background:#eaf2fd;color:#28517f;border-radius:8px;margin:20px 0}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#eef4fc;border-radius:8px;padding:15px;font-size:13px}
+footer{font-size:13px;color:#52657c;padding:18px 0}
+@media(max-width:560px){.hero{padding:24px}main{padding:20px 14px 45px}}
+</style></head><body>
+<header><div><a class="logo" href="/demo">CTI SENTINEL</a><div class="sub">AI threat intelligence · Public read-only demonstration</div></div>
+<a class="btn" href="/login">Sign in to full workspace</a></header>
+<main>
+<section class="hero"><span class="sub" style="color:#cddffe">Academic research workspace</span>
+<h1>A clearer view. A better decision.</h1>
+<p>I am Ishan Mahansaria (24BTRCL085). I present this public, read-only view of CTI Sentinel as a safe demonstration of the source-backed threat-intelligence workspace. The full application supports investigations, AI chat and authenticated research tools.</p>
+<div class="ctas"><a class="btn primary" href="#intelligence">Explore public intelligence</a><a class="btn" href="#inspect">Inspect a file locally</a></div></section>
+<div class="notice">This preview uses a <b>bundled historical public-source snapshot</b>, not live feed data. I do not treat indicator observations as confirmed malicious activity. The preview never requests or displays private API keys.</div>
+<section class="grid" aria-label="Summary statistics">
+<div class="card"><span class="tag">Public snapshot events</span><div id="events-count" class="stat">—</div><p class="muted">Events represented in the bundled research dataset</p></div>
+<div class="card"><span class="tag">Indicator observations</span><div id="records-count" class="stat">—</div><p class="muted">Reported observables, not confirmed attacks</p></div>
+<div class="card"><span class="tag">Workspace access</span><div class="stat" style="font-size:22px">Read-only</div><p class="muted">Private notes, AI/chat, uploads and VirusTotal lookups require authentication.</p></div>
+</section>
+<section class="card" id="intelligence"><h2>Explore published threat signals</h2>
+<p class="muted">I filter events by report title or publisher using public snapshot metadata.</p>
+<form id="search-form" class="toolbar"><input type="search" id="search-box" placeholder="Search reports or publishers" aria-label="Search snapshot"><button class="btn primary" type="submit">Search</button></form>
+<div class="muted" id="search-summary" role="status">Loading public snapshot…</div>
+<div id="events" class="list"></div><div class="toolbar"><button id="previous" class="btn" type="button">Previous</button><button id="next" class="btn" type="button">Next</button></div>
+</section>
+<section class="card" id="inspect" style="margin-top:20px">
+<h2>Inspect a file without uploading it</h2><p class="muted">I can calculate the SHA-256 fingerprint of a file in the browser. The file stays on this computer and is not uploaded or executed. Fingerprinting does not prove a file is safe.</p>
+<input type="file" id="file" aria-label="Choose a file" /><pre id="digest">Choose a file smaller than 20 MB to calculate its SHA-256 hash.</pre>
+</section>
+<section class="card" style="margin-top:20px"><h2>Full CTI Sentinel workspace</h2>
+<p>I use the authenticated application to conduct source-backed research, import my lab evidence, manage investigations, ask cited questions and request VirusTotal hash reputation. I keep the server API keys private.</p>
+<a class="btn primary" href="/login">Open full workspace</a></section>
+<footer>CTI Sentinel · Ishan Mahansaria · 24BTRCL085 · Adapted with permission from SOLANKYYY/signal-desk. Public records are not live threat detections.</footer>
+</main>
+<script>
+'use strict';let page=1,query='';
+const by=id=>document.getElementById(id);
+const nf=n=>Number(n||0).toLocaleString();
+async function load(){
+  by('search-summary').textContent='Loading published snapshot…';
+  try{
+    const resp=await fetch('/api/demo/events?'+new URLSearchParams({page,q:query}),{credentials:'omit'});
+    if(!resp.ok)throw Error('Preview data is temporarily unavailable');
+    const data=await resp.json();
+    by('search-summary').textContent=nf(data.total)+' matching snapshot events · Page '+page;
+    by('events').replaceChildren();
+    for(const e of data.items){
+      const item=document.createElement('div');item.className='event';
+      const title=document.createElement('b');title.textContent=e.title;
+      const meta=document.createElement('small');meta.textContent=e.publisher+' · '+e.date+' · '+nf(e.reportedIndicators)+' observations';
+      item.append(title,meta);
+      if(e.reference){const link=document.createElement('a');link.href=e.reference;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Original source';item.append(link)}
+      by('events').append(item);
+    }
+    if(!data.items.length)by('events').textContent='No matching events.';
+    by('previous').disabled=page===1;
+    by('next').disabled=page*15>=data.total;
+  }catch(err){by('search-summary').textContent=err.message}
+}
+by('search-form').addEventListener('submit',e=>{e.preventDefault();query=by('search-box').value.trim();page=1;load()});
+by('previous').onclick=()=>{page=Math.max(1,page-1);load()};
+by('next').onclick=()=>{page++;load()};
+by('file').onchange=async()=>{
+  const file=by('file').files[0];if(!file)return;
+  if(file.size>20*1024*1024){by('digest').textContent='I only inspect files smaller than 20 MB.';return}
+  try{
+    const bytes=await file.arrayBuffer(),raw=await crypto.subtle.digest('SHA-256',bytes);
+    const hash=Array.from(new Uint8Array(raw),x=>x.toString(16).padStart(2,'0')).join('');
+    by('digest').textContent='File: '+file.name+'\nBytes: '+file.size+'\nSHA-256: '+hash+'\n\nNo file content was uploaded or executed. No malware verdict was performed.';
+  }catch(e){by('digest').textContent='This browser could not calculate the SHA-256 hash.'}
+};
+fetch('/api/demo/summary',{credentials:'omit'}).then(r=>{if(!r.ok)throw Error('Unavailable');return r.json()}).then(d=>{by('events-count').textContent=nf(d.snapshotEvents);by('records-count').textContent=nf(d.snapshotObservations)}).catch(()=>{by('events-count').textContent='—';by('records-count').textContent='—'});
+load();
+</script></body></html>

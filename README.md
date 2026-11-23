@@ -6,7 +6,7 @@
 **Faculty:** Sujeet Jagtap  
 **Course:** 23CSE528 — NoSQL Database using MongoDB
 
-CTI Sentinel is my hosted academic threat-intelligence and MongoDB application, adapted from the [original Signal Desk project](https://github.com/SOLANKYYY/signal-desk) with appropriate source attribution.
+CTI Sentinel is my hosted academic threat-intelligence and MongoDB application.
 
 ## Open the application
 

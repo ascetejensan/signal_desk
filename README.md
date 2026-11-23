@@ -14,6 +14,7 @@ CTI Sentinel is my hosted academic threat-intelligence and MongoDB application.
 |---|---|---|
 | **Live CTI Sentinel** | **[Open Full Website](https://cti-sentinel-ishan.vercel.app/)** | Hosted Flask interface; full workspace requires an application login |
 | **Public demo** | **[Open No-Login Demo](https://cti-sentinel-ishan.vercel.app/demo)** | Read-only historical public-intelligence snapshot, plus local hash demonstration |
+| **Docker Hub classroom image** | **[CTI Sentinel Docker tags](https://hub.docker.com/r/ishanmahansaria/cti-sentinel-classroom/tags)** | Preloaded local MongoDB, Flask application and Ollama AI models |
 | **VirusTotal scanner** | [File and URL reputation](https://cti-sentinel-ishan.vercel.app/#scan) | Authenticated full workspace; API access is subject to VirusTotal quotas |
 | **Coursework repository** | [NoSQL laboratory submission](https://github.com/ascetejensan/CTI-Sentinel-AI-Threat-Intelligence) | **Private**; the owner must grant GitHub access to reviewers |
 | **Lab submission source pointer** | [Mini-project SOURCE.md](https://github.com/ascetejensan/CTI-Sentinel-AI-Threat-Intelligence/blob/main/mini-project/SOURCE.md) | Explains why this is the maintained app repository; private link |
@@ -74,6 +75,8 @@ Uploaded files may be shared with security partners. Never upload confidential c
 - [Coursework submission index](https://github.com/ascetejensan/CTI-Sentinel-AI-Threat-Intelligence/blob/main/README.md) (**private repository**)
 
 ## One-image Docker classroom edition (8 GB-friendly)
+
+**Final Docker Hub image:** [ishanmahansaria/cti-sentinel-classroom — available tags](https://hub.docker.com/r/ishanmahansaria/cti-sentinel-classroom/tags). Choose an available tag from this page for `docker pull`.
 
 For a teacher who wants to **pull one Docker image** rather than visit the hosted Vercel website, see the [**optimized classroom Docker guide**](docs/DOCKER_CLASSROOM_LITE.md).
 
